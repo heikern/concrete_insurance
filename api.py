@@ -4,6 +4,7 @@
 
 import flask
 from flask import request, jsonify
+from flask_cors import CORS
 from joblib import dump, load
 from pathlib import Path
 from scipy.stats import norm
@@ -15,6 +16,7 @@ model_path = output_data_dir / "model.joblib"
 
 app = flask.Flask(__name__)
 app.config["DEBUG"] = True
+CORS(app)
 
 
 @app.route('/', methods=['GET'])
@@ -25,17 +27,17 @@ def home():
 @app.route('/get_quote', methods = ['GET'])
 def get_strength():
     if 'wcr' in request.args and 'acr' in request.args:
-        wcr = request.args["wcr"]
-        acr = request.args["acr"]
-        long = request.args["long"]
-        lat = request.args["lat"]
-        req_strength = request.args["req_strength"]
-        pour_revenue = request.args["pour_revenue"]
+        wcr = float(request.args["wcr"])
+        acr = float(request.args["acr"])
+        long = float(request.args["long"])
+        lat = float(request.args["lat"])
+        req_strength = float(request.args["req_strength"])
+        pour_revenue = float(request.args["pour_revenue"])
         
         pour_star = request.args["pour_star"]
 
-        pour_star_multipliers = [1.2,1,0.9,0.8,0.5]
-        pour_star_coeff = pour_star_multipliers[pour_star]
+        pour_star_multipliers = [1.2,1,0.99,0.97,0.96]
+        pour_star_coeff = pour_star_multipliers[int(pour_star)]
 
         clf = load(model_path)
         mean_strength = float(clf.predict([[wcr,acr,long,lat]]))
@@ -48,10 +50,16 @@ def get_strength():
 
 
         output = {
-            "strength": mean_strength,
+            "pof": cdf,
+            "pour_revenue" : pour_revenue,
+            "margin": margin,
+            "pour_star_coeff": pour_star_coeff,
+            "mean_strength": mean_strength,
+            "variance_strength" : sigma*sigma,
             "premium": premium
         }
         return jsonify(output)
+        # return output
     else:
         return "gimmie something to work with"
 
